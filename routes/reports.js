@@ -128,9 +128,8 @@ router.post('/', auth, async (req, res) => {
     lat,
     lng,
     photo_url
-  } = req.body;
-
-  // Basic validation
+  } = req.body; 
+ 
   if (!trail_name || !condition_type || !severity || !lat || !lng) {
     return res.status(400).json({
       error: 'trail_name, condition_type, severity, lat, and lng are required'
@@ -148,6 +147,26 @@ router.post('/', auth, async (req, res) => {
   }
 
   try {
+    // Auto-create the user row if it doesn't exist yet
+    // This handles the first time a Cognito user submits a report
+    const cognitoSub = req.user.sub;
+    const email = req.user.email || req.user.username || cognitoSub;
+
+    await pool.query(
+      `INSERT INTO users (cognito_sub, email, role)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (cognito_sub) DO NOTHING`,
+      [cognitoSub, email, 'public']
+    );
+
+    // Get the internal user ID
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE cognito_sub = $1',
+      [cognitoSub]
+    );
+    const userId = userResult.rows[0].id;
+
+    // Insert the report
     const result = await pool.query(
       `INSERT INTO reports
         (trail_name, condition_type, severity, description, location, photo_url, user_id)
@@ -161,10 +180,10 @@ router.post('/', auth, async (req, res) => {
         condition_type,
         severity,
         description || null,
-        lng,  // PostGIS uses longitude first
+        lng,
         lat,
         photo_url || null,
-        req.user.sub  // Cognito user ID from JWT
+        userId
       ]
     );
 
@@ -194,7 +213,13 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(404).json({ error: 'Report not found' });
     }
 
-    const isOwner = existing.rows[0].user_id === req.user.sub;
+    // In PUT route — replace the ownership check with:
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE cognito_sub = $1',
+      [req.user.sub]
+    );
+    const userId = userResult.rows.length > 0 ? userResult.rows[0].id : null;
+    const isOwner = existing.rows[0].user_id === userId;
     const isLandManager = req.user['custom:role'] === 'land_manager';
 
     if (!isOwner && !isLandManager) {
@@ -238,7 +263,13 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({ error: 'Report not found' });
     }
 
-    const isOwner = existing.rows[0].user_id === req.user.sub;
+    // In PUT route — replace the ownership check with:
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE cognito_sub = $1',
+      [req.user.sub]
+    );
+    const userId = userResult.rows.length > 0 ? userResult.rows[0].id : null;
+    const isOwner = existing.rows[0].user_id === userId;
     const isLandManager = req.user['custom:role'] === 'land_manager';
 
     if (!isOwner && !isLandManager) {
