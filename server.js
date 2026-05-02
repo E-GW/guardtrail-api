@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -12,6 +13,7 @@ app.use(helmet());
 // Routes
 const reportsRouter = require('./routes/reports');
 app.use('/api/reports', reportsRouter);
+console.log('Routes registered: /health and /api/reports');
 
 // Health check endpoint — useful for AWS load balancer checks
 app.get('/health', (req, res) => {
