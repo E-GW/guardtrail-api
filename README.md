@@ -2,7 +2,7 @@
 
 A Node.js/Express REST API for the GuardTrail crowdsourced trail conditions app.
 
-GuardTrail gives hikers the abilty to track and report adverse trail condition like ice, washouts, and downed trees in real time, giing later hikers a heads-up about what they may encounter. Trail maintenence crews can also use teh app to see where hikers have found problems and resolve them.
+GuardTrail gives hikers the abilty to track and report adverse trail condition like ice, washouts, and downed trees in real time, giving later hikers a heads-up about what they may encounter. Trail maintenence crews can also use the app to see where hikers have found problems and resolve them.
 
 ## Tech stack
 - Node.js + Express
